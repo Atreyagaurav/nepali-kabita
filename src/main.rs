@@ -1,4 +1,4 @@
-use iced::widget::{column, horizontal_space, row, text_editor, toggler};
+use iced::widget::{button, center, column, horizontal_space, row, slider, text_editor, toggler};
 use iced::{Element, Fill, Font, Theme};
 
 pub static PREETI_FONT: &[u8] = include_bytes!("../fonts/Preeti Normal.otf");
@@ -10,16 +10,34 @@ fn main() -> iced::Result {
         .run()
 }
 
-#[derive(Default)]
 pub struct Uni2Preeti {
-    pub dark_theme: bool,
+    dark_theme: bool,
+    show_preeti: bool,
+    uni_size: u16,
+    pre_size: u16,
     unicode: text_editor::Content,
     preeti: text_editor::Content,
+}
+
+impl Default for Uni2Preeti {
+    fn default() -> Self {
+        Self {
+            dark_theme: true,
+            show_preeti: false,
+            uni_size: 20,
+            pre_size: 25,
+            unicode: text_editor::Content::default(),
+            preeti: text_editor::Content::default(),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
     ThemeChange(bool),
+    TogglePreeti(bool),
+    UniFontSize(u16),
+    PreFontSize(u16),
     Unicode(text_editor::Action),
     Preeti(text_editor::Action),
 }
@@ -30,6 +48,9 @@ impl Uni2Preeti {
             Message::ThemeChange(theme) => {
                 self.dark_theme = theme;
             }
+            Message::TogglePreeti(v) => self.show_preeti = v,
+            Message::UniFontSize(s) => self.uni_size = s,
+            Message::PreFontSize(s) => self.pre_size = s,
             Message::Unicode(action) => {
                 self.unicode.perform(action);
             }
@@ -47,15 +68,40 @@ impl Uni2Preeti {
         .spacing(10)
         .padding(10);
 
-        let unicode = text_editor(&self.unicode)
-            .height(Fill)
-            .size(20)
-            .on_action(Message::Unicode);
-        let preeti = text_editor(&self.preeti)
-            .height(Fill)
-            .font(Font::with_name("Preeti"))
-            .size(25)
-            .on_action(Message::Preeti);
+        let unicode = column![
+            text_editor(&self.unicode)
+                .height(Fill)
+                .size(self.uni_size)
+                .placeholder("Type in Unicode")
+                .on_action(Message::Unicode),
+            slider(8..=100, self.uni_size, Message::UniFontSize).width(Fill)
+        ]
+        .spacing(5);
+        let preeti: Element<_> = if self.show_preeti {
+            row![
+                column![
+                    text_editor(&self.preeti)
+                        .height(Fill)
+                        .font(Font::with_name("Preeti"))
+                        .size(self.pre_size)
+                        .placeholder("Type in Preeti")
+                        .on_action(Message::Preeti),
+                    slider(8..=100, self.pre_size, Message::PreFontSize).width(Fill)
+                ]
+                .spacing(5),
+                button(center(">"))
+                    .on_press(Message::TogglePreeti(false))
+                    .height(Fill)
+                    .width(25)
+            ]
+            .into()
+        } else {
+            button(center("<"))
+                .on_press(Message::TogglePreeti(true))
+                .height(Fill)
+                .width(25)
+                .into()
+        };
         column![controls, row![unicode, preeti].spacing(20)]
             .spacing(20)
             .padding(25)
